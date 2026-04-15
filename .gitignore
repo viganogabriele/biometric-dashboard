@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Local env
+.env
+.env.*
+!.env.example
+
+# Personal health data (DO NOT COMMIT)
+data/*.csv
+data/*.json
+data/*.md
+src/data/healthData.ts
+
+# Optional private variants
+src/data/*.private.ts
+
+# Local generated reports (if ever saved in repo folders)
+reports/
+exports/
+*.xlsx
+*.xls
+*.pdf
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
