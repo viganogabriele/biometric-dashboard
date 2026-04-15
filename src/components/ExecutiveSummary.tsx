@@ -1,4 +1,6 @@
 import { Activity, Dna, Expand, Scale, Waves } from "lucide-react";
+import type { Locale } from "../i18n";
+import { useI18n } from "../i18n";
 import type { HealthData } from "../types";
 import { formatDate, formatMetric } from "../utils/format";
 import { deltaFromPrevious, getLatestAndPrevious } from "../utils/metrics";
@@ -7,9 +9,14 @@ import { Panel } from "./common/Panel";
 
 interface ExecutiveSummaryProps {
   healthData: HealthData;
+  locale: Locale;
 }
 
-export const ExecutiveSummary = ({ healthData }: ExecutiveSummaryProps) => {
+export const ExecutiveSummary = ({
+  healthData,
+  locale,
+}: ExecutiveSummaryProps) => {
+  const { m } = useI18n();
   const { latest: biaLatest, previous: biaPrevious } = getLatestAndPrevious(
     healthData.bia.measurements,
   );
@@ -40,8 +47,8 @@ export const ExecutiveSummary = ({ healthData }: ExecutiveSummaryProps) => {
   return (
     <div className="grid gap-4">
       <Panel
-        title="Ultimi Risultati"
-        subtitle="Date asincrone gestite automaticamente: ogni card mostra il dato piu recente per la sua categoria."
+        title={m.latestResults}
+        subtitle={m.latestResultsSubtitle}
         icon={Activity}
       >
         <div className="grid gap-4 lg:grid-cols-3">
@@ -53,17 +60,26 @@ export const ExecutiveSummary = ({ healthData }: ExecutiveSummaryProps) => {
               </h3>
               <span className="text-xs text-slate-400">
                 {biaLatest.date
-                  ? formatDate(biaLatest.date)
+                  ? formatDate(
+                      biaLatest.date,
+                      m.dateUnavailable,
+                      locale === "it" ? "it-IT" : "en-GB",
+                    )
                   : biaLatest.dateLabel}
               </span>
             </header>
             <div className="space-y-3">
               <div>
                 <p className="text-xs uppercase tracking-wide text-slate-400">
-                  Massa grassa
+                  {m.bodyFat}
                 </p>
                 <p className="mt-1 text-2xl font-display font-semibold text-slate-100">
-                  {formatMetric(biaLatest.metrics.bodyFatPct, "%", 2)}
+                  {formatMetric(
+                    biaLatest.metrics.bodyFatPct,
+                    "%",
+                    2,
+                    locale === "it" ? "it-IT" : "en-US",
+                  )}
                 </p>
               </div>
               <DeltaPill
@@ -72,7 +88,13 @@ export const ExecutiveSummary = ({ healthData }: ExecutiveSummaryProps) => {
                 positiveIsGood={false}
               />
               <p className="text-xs text-slate-400">
-                Peso: {formatMetric(biaLatest.metrics.weightKg, "kg", 1)}
+                {m.weight}:{" "}
+                {formatMetric(
+                  biaLatest.metrics.weightKg,
+                  "kg",
+                  1,
+                  locale === "it" ? "it-IT" : "en-US",
+                )}
               </p>
             </div>
           </article>
@@ -81,19 +103,28 @@ export const ExecutiveSummary = ({ healthData }: ExecutiveSummaryProps) => {
             <header className="mb-3 flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-cyan-200">
                 <Dna className="h-4 w-4" />
-                Pliche
+                {m.skinfolds}
               </h3>
               <span className="text-xs text-slate-400">
-                {formatDate(skinLatest.date)}
+                {formatDate(
+                  skinLatest.date,
+                  m.dateUnavailable,
+                  locale === "it" ? "it-IT" : "en-GB",
+                )}
               </span>
             </header>
             <div className="space-y-3">
               <div>
                 <p className="text-xs uppercase tracking-wide text-slate-400">
-                  Massa grassa
+                  {m.bodyFat}
                 </p>
                 <p className="mt-1 text-2xl font-display font-semibold text-slate-100">
-                  {formatMetric(skinLatest.bodyFatPctFromSkinfold, "%", 2)}
+                  {formatMetric(
+                    skinLatest.bodyFatPctFromSkinfold,
+                    "%",
+                    2,
+                    locale === "it" ? "it-IT" : "en-US",
+                  )}
                 </p>
               </div>
               <DeltaPill
@@ -102,7 +133,13 @@ export const ExecutiveSummary = ({ healthData }: ExecutiveSummaryProps) => {
                 positiveIsGood={false}
               />
               <p className="text-xs text-slate-400">
-                Media pliche: {formatMetric(skinLatest.averageMm, "mm", 2)}
+                {m.averageSkinfold}:{" "}
+                {formatMetric(
+                  skinLatest.averageMm,
+                  "mm",
+                  2,
+                  locale === "it" ? "it-IT" : "en-US",
+                )}
               </p>
             </div>
           </article>
@@ -111,22 +148,27 @@ export const ExecutiveSummary = ({ healthData }: ExecutiveSummaryProps) => {
             <header className="mb-3 flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-cyan-200">
                 <Expand className="h-4 w-4" />
-                Circonferenze
+                {m.circumferences}
               </h3>
               <span className="text-xs text-slate-400">
-                {formatDate(circLatest.date)}
+                {formatDate(
+                  circLatest.date,
+                  m.dateUnavailable,
+                  locale === "it" ? "it-IT" : "en-GB",
+                )}
               </span>
             </header>
             <div className="space-y-3">
               <div>
                 <p className="text-xs uppercase tracking-wide text-slate-400">
-                  Massa grassa
+                  {m.bodyFat}
                 </p>
                 <p className="mt-1 text-2xl font-display font-semibold text-slate-100">
                   {formatMetric(
                     circLatest.bodyFatPctFromCircumferences,
                     "%",
                     2,
+                    locale === "it" ? "it-IT" : "en-US",
                   )}
                 </p>
               </div>
@@ -139,7 +181,13 @@ export const ExecutiveSummary = ({ healthData }: ExecutiveSummaryProps) => {
                 positiveIsGood={false}
               />
               <p className="text-xs text-slate-400">
-                Vita: {formatMetric(circLatest.sitesCm.vita, "cm", 1)}
+                {m.waist}:{" "}
+                {formatMetric(
+                  circLatest.sitesCm.vita,
+                  "cm",
+                  1,
+                  locale === "it" ? "it-IT" : "en-US",
+                )}
               </p>
             </div>
           </article>
@@ -147,33 +195,48 @@ export const ExecutiveSummary = ({ healthData }: ExecutiveSummaryProps) => {
       </Panel>
 
       <Panel
-        title="Confronto Diretto"
-        subtitle="BIA vs Pliche nello stesso punto: confronto rapido dei valori attuali."
+        title={m.directComparison}
+        subtitle={m.directComparisonSubtitle}
         icon={Waves}
       >
         <div className="grid gap-4 md:grid-cols-3">
           <article className="rounded-xl border border-slate-700/60 bg-slate-900/70 p-4">
             <p className="text-xs uppercase tracking-wide text-slate-400">
-              Massa grassa BIA
+              {m.biaBodyFat}
             </p>
             <p className="mt-1 text-2xl font-display font-semibold text-cyan-200">
-              {formatMetric(biaLatest.metrics.bodyFatPct, "%", 2)}
+              {formatMetric(
+                biaLatest.metrics.bodyFatPct,
+                "%",
+                2,
+                locale === "it" ? "it-IT" : "en-US",
+              )}
             </p>
           </article>
           <article className="rounded-xl border border-slate-700/60 bg-slate-900/70 p-4">
             <p className="text-xs uppercase tracking-wide text-slate-400">
-              Massa grassa Pliche
+              {m.skinfoldBodyFat}
             </p>
             <p className="mt-1 text-2xl font-display font-semibold text-cyan-200">
-              {formatMetric(skinLatest.bodyFatPctFromSkinfold, "%", 2)}
+              {formatMetric(
+                skinLatest.bodyFatPctFromSkinfold,
+                "%",
+                2,
+                locale === "it" ? "it-IT" : "en-US",
+              )}
             </p>
           </article>
           <article className="rounded-xl border border-slate-700/60 bg-slate-900/70 p-4">
             <p className="text-xs uppercase tracking-wide text-slate-400">
-              Differenza (BIA - Pliche)
+              {m.differenceBiaSkinfold}
             </p>
             <p className="mt-1 text-2xl font-display font-semibold text-slate-100">
-              {formatMetric(comparisonDelta, "%", 2)}
+              {formatMetric(
+                comparisonDelta,
+                "%",
+                2,
+                locale === "it" ? "it-IT" : "en-US",
+              )}
             </p>
           </article>
         </div>

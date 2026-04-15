@@ -24,6 +24,7 @@ import {
   type CircumferenceInput,
   type SkinfoldInput,
 } from "./utils/anthropometry";
+import { useI18n } from "./i18n";
 
 const SKINFOLD_STORAGE_KEY = "myhealthhub.skinfolds";
 const CIRC_STORAGE_KEY = "myhealthhub.circumferences";
@@ -187,6 +188,7 @@ const hasStoredValidProfile = (): boolean => {
 };
 
 const App = () => {
+  const { locale, setLocale, m } = useI18n();
   const dataMenuRef = useRef<HTMLDivElement | null>(null);
   const [profile, setProfile] = useState<HealthProfile>(() => {
     if (typeof window === "undefined") {
@@ -328,23 +330,23 @@ const App = () => {
     const trimmedName = setupName.trim();
 
     if (!trimmedName) {
-      setSetupError("Inserisci un nome paziente valido.");
+      setSetupError(m.setupNameError);
       return;
     }
 
     if (!setupBirthDate) {
-      setSetupError("Inserisci la data di nascita.");
+      setSetupError(m.setupBirthDateError);
       return;
     }
 
     const birth = new Date(setupBirthDate);
     if (Number.isNaN(birth.getTime())) {
-      setSetupError("Data di nascita non valida.");
+      setSetupError(m.setupBirthDateInvalidError);
       return;
     }
 
     if (!Number.isFinite(parsedHeight) || parsedHeight <= 0) {
-      setSetupError("Inserisci un'altezza valida (cm). ");
+      setSetupError(m.setupHeightError);
       return;
     }
 
@@ -489,7 +491,7 @@ const App = () => {
     }
   }, [profile]);
 
-  const sourceBadge = `Fonti: ${HEALTH_DATA.sources.bia} + ${HEALTH_DATA.sources.anthropometry}`;
+  const sourceBadge = `${m.sourcesPrefix}: ${HEALTH_DATA.sources.bia} + ${HEALTH_DATA.sources.anthropometry}`;
 
   const openMenu = (mode: EntryMode) => {
     setDataMenuMode(mode);
@@ -511,15 +513,13 @@ const App = () => {
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm">
           <div className="w-full max-w-2xl rounded-2xl border border-slate-700/70 bg-surface-900 p-6 shadow-panel">
             <h2 className="font-display text-2xl font-semibold text-slate-100">
-              Configurazione iniziale
+              {m.setupTitle}
             </h2>
-            <p className="mt-1 text-sm text-slate-400">
-              Inserisci una volta sola i dati base del profilo.
-            </p>
+            <p className="mt-1 text-sm text-slate-400">{m.setupSubtitle}</p>
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <label className="text-xs text-slate-400">
-                Nome paziente
+                {m.patientName}
                 <input
                   value={setupName}
                   onChange={(event) => setSetupName(event.target.value)}
@@ -528,7 +528,7 @@ const App = () => {
               </label>
 
               <label className="text-xs text-slate-400">
-                Data di nascita
+                {m.birthDate}
                 <input
                   type="date"
                   value={setupBirthDate}
@@ -538,7 +538,7 @@ const App = () => {
               </label>
 
               <label className="text-xs text-slate-400">
-                Sesso
+                {m.sex}
                 <select
                   value={setupSex}
                   onChange={(event) =>
@@ -546,13 +546,13 @@ const App = () => {
                   }
                   className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm text-slate-100"
                 >
-                  <option value="male">Maschio</option>
-                  <option value="female">Femmina</option>
+                  <option value="male">{m.male}</option>
+                  <option value="female">{m.female}</option>
                 </select>
               </label>
 
               <label className="text-xs text-slate-400">
-                Altezza (cm)
+                {m.heightCm}
                 <input
                   type="number"
                   step="0.1"
@@ -576,7 +576,7 @@ const App = () => {
                 className="inline-flex items-center gap-2 rounded-lg border border-cyan-700/60 bg-cyan-900/30 px-4 py-2 text-sm text-cyan-100 hover:bg-cyan-900/45"
               >
                 <Settings2 className="h-4 w-4" />
-                Salva configurazione
+                {m.saveSetup}
               </button>
             </div>
           </div>
@@ -593,9 +593,22 @@ const App = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <label className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800/60 px-2 py-1 text-xs text-slate-300">
+              {m.languageLabel}
+              <select
+                value={locale}
+                onChange={(event) =>
+                  setLocale(event.target.value as "it" | "en")
+                }
+                className="rounded border border-slate-500 bg-slate-900 px-2 py-1 text-xs text-slate-100"
+              >
+                <option value="it">{m.languageItalian}</option>
+                <option value="en">{m.languageEnglish}</option>
+              </select>
+            </label>
             <span className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800/60 px-3 py-2 text-xs text-slate-300">
               <Stethoscope className="h-4 w-4 text-cyan-300" />
-              Paziente: {healthData.profile.patientName}
+              {m.patientPrefix}: {healthData.profile.patientName}
             </span>
             <button
               type="button"
@@ -603,7 +616,7 @@ const App = () => {
               className="no-print inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800/70 px-3 py-2 text-xs text-slate-200 hover:bg-slate-700/70"
             >
               <Settings2 className="h-4 w-4" />
-              Configurazione iniziale
+              {m.initialSetupButton}
             </button>
             <button
               type="button"
@@ -611,7 +624,7 @@ const App = () => {
               className="no-print inline-flex items-center gap-2 rounded-lg border border-rose-700/60 bg-rose-900/25 px-3 py-2 text-xs text-rose-200 hover:bg-rose-900/45"
             >
               <RefreshCcw className="h-4 w-4" />
-              Reset memoria
+              {m.resetMemoryButton}
             </button>
           </div>
         </div>
@@ -626,7 +639,7 @@ const App = () => {
               className="inline-flex items-center gap-2 rounded-lg border border-cyan-700/60 bg-cyan-900/30 px-3 py-1.5 text-sm text-cyan-100 hover:bg-cyan-900/45"
             >
               <Dna className="h-4 w-4" />
-              Inserisci pliche
+              {m.addSkinfolds}
             </button>
             <button
               type="button"
@@ -634,7 +647,7 @@ const App = () => {
               className="inline-flex items-center gap-2 rounded-lg border border-cyan-700/60 bg-cyan-900/30 px-3 py-1.5 text-sm text-cyan-100 hover:bg-cyan-900/45"
             >
               <Ruler className="h-4 w-4" />
-              Inserisci circonferenze
+              {m.addCircumferences}
             </button>
             <button
               type="button"
@@ -642,7 +655,7 @@ const App = () => {
               className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800/70 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-700/70"
             >
               <Wrench className="h-4 w-4" />
-              {isDataMenuOpen ? "Nascondi gestione dati" : "Apri gestione dati"}
+              {isDataMenuOpen ? m.hideDataManagement : m.openDataManagement}
             </button>
           </div>
         </section>
@@ -660,15 +673,16 @@ const App = () => {
               onDeleteCircumference={handleDeleteCircumference}
               onDeleteCircumferenceGroup={handleDeleteCircumferenceGroup}
               initialMode={dataMenuMode}
+              locale={locale}
               onClose={() => setIsDataMenuOpen(false)}
             />
           </div>
         ) : null}
 
-        <ExecutiveSummary healthData={healthData} />
-        <BiaModule healthData={healthData} />
-        <SkinfoldModule healthData={healthData} />
-        <CircumferenceModule healthData={healthData} />
+        <ExecutiveSummary healthData={healthData} locale={locale} />
+        <BiaModule healthData={healthData} locale={locale} />
+        <SkinfoldModule healthData={healthData} locale={locale} />
+        <CircumferenceModule healthData={healthData} locale={locale} />
       </main>
     </div>
   );

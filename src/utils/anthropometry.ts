@@ -5,9 +5,10 @@ import type {
   SkinfoldMeasurement,
   SkinfoldSites,
 } from "../types";
+import type { Locale } from "../i18n";
 
 export interface NutritionReportRow {
-  categoria: "Pliche" | "Circonferenze";
+  category: "skinfolds" | "circumferences";
   date: string;
   numeroMisurazione: number;
   pesoKg: number | null;
@@ -161,39 +162,76 @@ export const buildCircumferenceMeasurement = (
 
 export const buildAnthropometryExport = (
   healthData: HealthData,
+  locale: Locale,
+  messages: {
+    biaMdNote: string;
+  },
 ): { json: string; csv: string } => {
-  const exportObject = {
-    generatoIl: new Date().toISOString(),
-    profilo: healthData.profile,
-    pliche: healthData.skinfolds.measurements,
-    circonferenze: healthData.circumferences.measurements,
-    nota: "BIA gestita separatamente da sorgenti .md.",
-  };
+  const exportObject =
+    locale === "it"
+      ? {
+          generatoIl: new Date().toISOString(),
+          profilo: healthData.profile,
+          pliche: healthData.skinfolds.measurements,
+          circonferenze: healthData.circumferences.measurements,
+          nota: messages.biaMdNote,
+        }
+      : {
+          generatedAt: new Date().toISOString(),
+          profile: healthData.profile,
+          skinfolds: healthData.skinfolds.measurements,
+          circumferences: healthData.circumferences.measurements,
+          note: messages.biaMdNote,
+        };
 
   const rows = buildNutritionReportRows(healthData);
 
-  const csvHeader = [
-    "categoria",
-    "data",
-    "numero_misurazione",
-    "peso_kg",
-    "body_fat_pct",
-    "media_pliche_mm",
-    "tricipite_mm",
-    "addome_mm",
-    "soprailiaca_mm",
-    "sottoscapolare_mm",
-    "ascellare_mm",
-    "pettorale_mm",
-    "coscia_mm",
-    "braccio_cm",
-    "torace_cm",
-    "vita_cm",
-    "fianchi_cm",
-    "coscia_cm",
-    "polpaccio_cm",
-    "collo_cm",
-  ];
+  const csvHeader =
+    locale === "it"
+      ? [
+          "categoria",
+          "data",
+          "numero_misurazione",
+          "peso_kg",
+          "massa_grassa_pct",
+          "media_pliche_mm",
+          "tricipite_mm",
+          "addome_mm",
+          "soprailiaca_mm",
+          "sottoscapolare_mm",
+          "ascellare_mm",
+          "pettorale_mm",
+          "coscia_mm",
+          "braccio_cm",
+          "torace_cm",
+          "vita_cm",
+          "fianchi_cm",
+          "coscia_cm",
+          "polpaccio_cm",
+          "collo_cm",
+        ]
+      : [
+          "category",
+          "date",
+          "measurement_number",
+          "weight_kg",
+          "body_fat_pct",
+          "avg_skinfold_mm",
+          "triceps_mm",
+          "abdomen_mm",
+          "suprailiac_mm",
+          "subscapular_mm",
+          "axillary_mm",
+          "pectoral_mm",
+          "thigh_mm",
+          "arm_cm",
+          "chest_cm",
+          "waist_cm",
+          "hips_cm",
+          "thigh_cm",
+          "calf_cm",
+          "neck_cm",
+        ];
 
   const escapeCsvValue = (value: string | number | null): string => {
     if (value === null || value === undefined) {
@@ -201,11 +239,7 @@ export const buildAnthropometryExport = (
     }
 
     const text = String(value);
-    if (
-      text.includes(";") ||
-      text.includes("\n") ||
-      text.includes("\"")
-    ) {
+    if (text.includes(";") || text.includes("\n") || text.includes('"')) {
       return `"${text.replace(/\"/g, '""')}"`;
     }
 
@@ -214,7 +248,13 @@ export const buildAnthropometryExport = (
 
   const csvBody = rows
     .map((row) => [
-      row.categoria,
+      row.category === "skinfolds"
+        ? locale === "it"
+          ? "Pliche"
+          : "Skinfolds"
+        : locale === "it"
+          ? "Circonferenze"
+          : "Circumferences",
       row.date,
       row.numeroMisurazione,
       row.pesoKg,
@@ -249,7 +289,7 @@ export const buildNutritionReportRows = (
 ): NutritionReportRow[] => {
   const skinfoldRows: NutritionReportRow[] =
     healthData.skinfolds.measurements.map((measurement) => ({
-      categoria: "Pliche",
+      category: "skinfolds",
       date: measurement.date ?? "",
       numeroMisurazione: measurement.measurementNumber,
       pesoKg: measurement.weightKg,
@@ -273,7 +313,7 @@ export const buildNutritionReportRows = (
 
   const circumferenceRows: NutritionReportRow[] =
     healthData.circumferences.measurements.map((measurement) => ({
-      categoria: "Circonferenze",
+      category: "circumferences",
       date: measurement.date ?? "",
       numeroMisurazione: measurement.measurementNumber,
       pesoKg: null,

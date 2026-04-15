@@ -9,12 +9,14 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { getSiteLabel, type Locale, useI18n } from "../i18n";
 import type { HealthData } from "../types";
 import { formatDate, formatMetric } from "../utils/format";
 import { Panel } from "./common/Panel";
 
 interface CircumferenceModuleProps {
   healthData: HealthData;
+  locale: Locale;
 }
 
 const CIRC_KEYS = [
@@ -29,11 +31,16 @@ const CIRC_KEYS = [
 
 export const CircumferenceModule = ({
   healthData,
+  locale,
 }: CircumferenceModuleProps) => {
+  const { m } = useI18n();
+  const numberLocale = locale === "it" ? "it-IT" : "en-US";
+  const dateLocale = locale === "it" ? "it-IT" : "en-GB";
+
   const chartData = healthData.circumferences.measurements.map(
     (measurement, index) => ({
       label: measurement.date
-        ? formatDate(measurement.date)
+        ? formatDate(measurement.date, m.dateUnavailable, dateLocale)
         : `CF ${index + 1}`,
       ...measurement.sitesCm,
       bodyFatPct: measurement.bodyFatPctFromCircumferences,
@@ -42,13 +49,13 @@ export const CircumferenceModule = ({
 
   return (
     <Panel
-      title="Circumferenze"
-      subtitle="Grafico andamento + dati singoli delle misure corporee."
+      title={m.circumferences}
+      subtitle={m.circumferencesSubtitle}
       icon={Ruler}
     >
       <div className="rounded-xl border border-slate-700/50 bg-slate-900/60 p-3">
         <h3 className="mb-2 text-sm font-semibold text-slate-200">
-          Grafici principali
+          {m.primaryCharts}
         </h3>
         <div className="h-80 w-full">
           <ResponsiveContainer>
@@ -77,7 +84,7 @@ export const CircumferenceModule = ({
                   dataKey={site.key}
                   stroke={site.color}
                   strokeWidth={2}
-                  name={`${site.label} (cm)`}
+                  name={`${getSiteLabel(locale, site.key)} (cm)`}
                 />
               ))}
               <Line
@@ -86,7 +93,7 @@ export const CircumferenceModule = ({
                 dataKey="bodyFatPct"
                 stroke="#fb7185"
                 strokeWidth={2}
-                name="Massa grassa (%)"
+                name={m.bodyFatLegend}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -95,31 +102,36 @@ export const CircumferenceModule = ({
 
       <div className="mt-5 overflow-x-auto rounded-xl border border-slate-700/50 bg-slate-900/60">
         <h3 className="px-3 pb-1 pt-3 text-sm font-semibold text-slate-200">
-          Dati singoli
+          {m.singleData}
         </h3>
         <table className="min-w-full divide-y divide-slate-700 text-sm">
           <thead className="bg-slate-900/80 text-xs uppercase tracking-wide text-slate-400">
             <tr>
-              <th className="px-3 py-2 text-left">Data</th>
-              <th className="px-3 py-2 text-left">Misura #</th>
+              <th className="px-3 py-2 text-left">{m.date}</th>
+              <th className="px-3 py-2 text-left">{m.measurement}</th>
               {CIRC_KEYS.map((site) => (
                 <th key={site.key} className="px-3 py-2 text-left">
-                  {site.label}
+                  {getSiteLabel(locale, site.key)}
                 </th>
               ))}
-              <th className="px-3 py-2 text-left">Massa grassa %</th>
+              <th className="px-3 py-2 text-left">{m.bodyFatPct}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800 text-slate-100">
             {healthData.circumferences.measurements.map((measurement) => (
               <tr key={measurement.id}>
                 <td className="px-3 py-2 text-slate-300">
-                  {formatDate(measurement.date)}
+                  {formatDate(measurement.date, m.dateUnavailable, dateLocale)}
                 </td>
                 <td className="px-3 py-2">{measurement.measurementNumber}</td>
                 {CIRC_KEYS.map((site) => (
                   <td key={site.key} className="px-3 py-2">
-                    {formatMetric(measurement.sitesCm[site.key], "cm", 1)}
+                    {formatMetric(
+                      measurement.sitesCm[site.key],
+                      "cm",
+                      1,
+                      numberLocale,
+                    )}
                   </td>
                 ))}
                 <td className="px-3 py-2">
@@ -127,6 +139,7 @@ export const CircumferenceModule = ({
                     measurement.bodyFatPctFromCircumferences,
                     "%",
                     2,
+                    numberLocale,
                   )}
                 </td>
               </tr>

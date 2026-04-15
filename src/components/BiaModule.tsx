@@ -9,17 +9,26 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import type { Locale } from "../i18n";
+import { useI18n } from "../i18n";
 import type { HealthData } from "../types";
 import { formatDate, formatMetric } from "../utils/format";
 import { Panel } from "./common/Panel";
 
 interface BiaModuleProps {
   healthData: HealthData;
+  locale: Locale;
 }
 
-export const BiaModule = ({ healthData }: BiaModuleProps) => {
+export const BiaModule = ({ healthData, locale }: BiaModuleProps) => {
+  const { m } = useI18n();
+  const numberLocale = locale === "it" ? "it-IT" : "en-US";
+  const dateLocale = locale === "it" ? "it-IT" : "en-GB";
+
   const chartData = healthData.bia.measurements.map((measurement, index) => ({
-    label: measurement.date ? formatDate(measurement.date) : `BIA ${index + 1}`,
+    label: measurement.date
+      ? formatDate(measurement.date, m.dateUnavailable, dateLocale)
+      : `BIA ${index + 1}`,
     weightKg: measurement.metrics.weightKg,
     bodyFatPct: measurement.metrics.bodyFatPct,
     bmrKcal: measurement.metrics.bmrKcal,
@@ -36,24 +45,22 @@ export const BiaModule = ({ healthData }: BiaModuleProps) => {
   }
 
   return (
-    <Panel
-      title="BIA"
-      subtitle="Grafico andamento + dati singoli misurazione per misurazione."
-      icon={ActivitySquare}
-    >
+    <Panel title="BIA" subtitle={m.biaSubtitle} icon={ActivitySquare}>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <article className="rounded-xl border border-slate-700/50 bg-slate-900/65 p-4">
-          <p className="text-xs uppercase tracking-wide text-slate-400">Peso</p>
+          <p className="text-xs uppercase tracking-wide text-slate-400">
+            {m.weight}
+          </p>
           <p className="mt-1 text-2xl font-display font-semibold text-cyan-200">
-            {formatMetric(latest.metrics.weightKg, "kg", 1)}
+            {formatMetric(latest.metrics.weightKg, "kg", 1, numberLocale)}
           </p>
         </article>
         <article className="rounded-xl border border-slate-700/50 bg-slate-900/65 p-4">
           <p className="text-xs uppercase tracking-wide text-slate-400">
-            Massa grassa
+            {m.bodyFat}
           </p>
           <p className="mt-1 text-2xl font-display font-semibold text-cyan-200">
-            {formatMetric(latest.metrics.bodyFatPct, "%", 2)}
+            {formatMetric(latest.metrics.bodyFatPct, "%", 2, numberLocale)}
           </p>
         </article>
         <article className="rounded-xl border border-slate-700/50 bg-slate-900/65 p-4">
@@ -61,20 +68,25 @@ export const BiaModule = ({ healthData }: BiaModuleProps) => {
             ECW / ICW
           </p>
           <p className="mt-1 text-2xl font-display font-semibold text-cyan-200">
-            {formatMetric(latest.metrics.ecwKg / latest.metrics.icwKg, "", 3)}
+            {formatMetric(
+              latest.metrics.ecwKg / latest.metrics.icwKg,
+              "",
+              3,
+              numberLocale,
+            )}
           </p>
         </article>
         <article className="rounded-xl border border-slate-700/50 bg-slate-900/65 p-4">
           <p className="text-xs uppercase tracking-wide text-slate-400">BMR</p>
           <p className="mt-1 text-2xl font-display font-semibold text-cyan-200">
-            {formatMetric(latest.metrics.bmrKcal, "kcal", 0)}
+            {formatMetric(latest.metrics.bmrKcal, "kcal", 0, numberLocale)}
           </p>
         </article>
       </div>
 
       <div className="mt-5 rounded-xl border border-slate-700/50 bg-slate-900/60 p-3">
         <h3 className="mb-2 text-sm font-semibold text-slate-200">
-          Grafici principali
+          {m.primaryCharts}
         </h3>
         <div className="h-72 w-full">
           <ResponsiveContainer>
@@ -109,7 +121,7 @@ export const BiaModule = ({ healthData }: BiaModuleProps) => {
                 dataKey="bodyFatPct"
                 stroke="#f59e0b"
                 strokeWidth={2}
-                name="Massa grassa (%)"
+                name={m.bodyFatLegend}
               />
               <Line
                 yAxisId="left"
@@ -142,14 +154,14 @@ export const BiaModule = ({ healthData }: BiaModuleProps) => {
 
       <div className="mt-5 overflow-x-auto rounded-xl border border-slate-700/50 bg-slate-900/60">
         <h3 className="px-3 pb-1 pt-3 text-sm font-semibold text-slate-200">
-          Dati singoli
+          {m.singleData}
         </h3>
         <table className="min-w-full divide-y divide-slate-700 text-sm">
           <thead className="bg-slate-900/80 text-xs uppercase tracking-wide text-slate-400">
             <tr>
-              <th className="px-3 py-2 text-left">Data</th>
-              <th className="px-3 py-2 text-left">Peso</th>
-              <th className="px-3 py-2 text-left">Massa grassa</th>
+              <th className="px-3 py-2 text-left">{m.date}</th>
+              <th className="px-3 py-2 text-left">{m.weight}</th>
+              <th className="px-3 py-2 text-left">{m.bodyFat}</th>
               <th className="px-3 py-2 text-left">ECW</th>
               <th className="px-3 py-2 text-left">ICW</th>
               <th className="px-3 py-2 text-left">BMR</th>
@@ -160,23 +172,52 @@ export const BiaModule = ({ healthData }: BiaModuleProps) => {
               <tr key={measurement.id}>
                 <td className="px-3 py-2 text-slate-300">
                   {measurement.date
-                    ? formatDate(measurement.date)
+                    ? formatDate(
+                        measurement.date,
+                        m.dateUnavailable,
+                        dateLocale,
+                      )
                     : measurement.dateLabel}
                 </td>
                 <td className="px-3 py-2">
-                  {formatMetric(measurement.metrics.weightKg, "kg")}
+                  {formatMetric(
+                    measurement.metrics.weightKg,
+                    "kg",
+                    1,
+                    numberLocale,
+                  )}
                 </td>
                 <td className="px-3 py-2">
-                  {formatMetric(measurement.metrics.bodyFatPct, "%", 2)}
+                  {formatMetric(
+                    measurement.metrics.bodyFatPct,
+                    "%",
+                    2,
+                    numberLocale,
+                  )}
                 </td>
                 <td className="px-3 py-2">
-                  {formatMetric(measurement.metrics.ecwKg, "kg", 2)}
+                  {formatMetric(
+                    measurement.metrics.ecwKg,
+                    "kg",
+                    2,
+                    numberLocale,
+                  )}
                 </td>
                 <td className="px-3 py-2">
-                  {formatMetric(measurement.metrics.icwKg, "kg", 2)}
+                  {formatMetric(
+                    measurement.metrics.icwKg,
+                    "kg",
+                    2,
+                    numberLocale,
+                  )}
                 </td>
                 <td className="px-3 py-2">
-                  {formatMetric(measurement.metrics.bmrKcal, "kcal", 0)}
+                  {formatMetric(
+                    measurement.metrics.bmrKcal,
+                    "kcal",
+                    0,
+                    numberLocale,
+                  )}
                 </td>
               </tr>
             ))}

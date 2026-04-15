@@ -1,4 +1,5 @@
 import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
+import { useI18n } from "../../i18n";
 import { formatNumber } from "../../utils/format";
 
 interface DeltaPillProps {
@@ -12,10 +13,12 @@ export const DeltaPill = ({
   unit = "",
   positiveIsGood = true,
 }: DeltaPillProps) => {
+  const { m, numberLocale } = useI18n();
+
   if (delta === null) {
     return (
       <span className="inline-flex items-center rounded-full border border-slate-600 bg-slate-800/70 px-2.5 py-1 text-xs text-slate-300">
-        Delta N/A
+        {m.deltaNA}
       </span>
     );
   }
@@ -38,7 +41,7 @@ export const DeltaPill = ({
       className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs ${palette}`}
     >
       <Icon className="h-3.5 w-3.5" />
-      {`Delta ${delta >= 0 ? "+" : ""}${formatNumber(delta, 2)}${unit}`}
+      {`${m.deltaPrefix} ${delta >= 0 ? "+" : ""}${formatNumber(delta, 2, numberLocale)}${unit}`}
     </span>
   );
 };

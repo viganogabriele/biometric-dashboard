@@ -13,6 +13,7 @@ import {
   buildAnthropometryExport,
   buildNutritionReportRows,
 } from "../utils/anthropometry";
+import { getSiteLabel, type Locale, useI18n } from "../i18n";
 import { Panel } from "./common/Panel";
 
 export type EntryMode = "skinfolds" | "circumferences";
@@ -28,6 +29,7 @@ interface DataEntryMenuProps {
   onDeleteCircumference: (id: string) => void;
   onDeleteCircumferenceGroup: (date: string) => void;
   initialMode?: EntryMode;
+  locale: Locale;
   onClose?: () => void;
 }
 
@@ -87,8 +89,12 @@ export const DataEntryMenu = ({
   onDeleteCircumference,
   onDeleteCircumferenceGroup,
   initialMode,
+  locale,
   onClose,
 }: DataEntryMenuProps) => {
+  const { m } = useI18n();
+  const dateLocale = locale === "it" ? "it-IT" : "en-GB";
+
   const [mode, setMode] = useState<EntryMode>(initialMode ?? "skinfolds");
   const [message, setMessage] = useState("");
 
@@ -134,7 +140,7 @@ export const DataEntryMenu = ({
   const handleAddSkinfold = (event: React.FormEvent) => {
     event.preventDefault();
     if (!skinfoldDate || !skinfoldWeight) {
-      setMessage("Compila data e peso prima di salvare le pliche.");
+      setMessage(m.messageFillDateWeight);
       return;
     }
 
@@ -153,9 +159,7 @@ export const DataEntryMenu = ({
         (value) => Number.isNaN(value) || value <= 0,
       )
     ) {
-      setMessage(
-        "Inserisci tutte le pliche con valori numerici maggiori di zero.",
-      );
+      setMessage(m.messageInvalidSkinfolds);
       return;
     }
 
@@ -166,14 +170,12 @@ export const DataEntryMenu = ({
     );
 
     if (!Number.isFinite(weight) || weight <= 0) {
-      setMessage("Inserisci un peso valido maggiore di zero.");
+      setMessage(m.messageInvalidWeight);
       return;
     }
 
     if (age === null) {
-      setMessage(
-        "Imposta una data di nascita valida nel profilo: l'eta viene calcolata in base alla data della misurazione.",
-      );
+      setMessage(m.messageInvalidBirthDateProfile);
       return;
     }
 
@@ -185,7 +187,7 @@ export const DataEntryMenu = ({
         sitesMm: parsedSites,
       });
     } catch {
-      setMessage("Errore nel calcolo pliche. Controlla i dati inseriti.");
+      setMessage(m.messageSkinfoldCalcError);
       return;
     }
 
@@ -199,13 +201,13 @@ export const DataEntryMenu = ({
       pettorale: "",
       coscia: "",
     });
-    setMessage("Nuova misurazione pliche aggiunta con successo.");
+    setMessage(m.messageSkinfoldAdded);
   };
 
   const handleAddCircumference = (event: React.FormEvent) => {
     event.preventDefault();
     if (!circDate) {
-      setMessage("Compila la data prima di salvare le circonferenze.");
+      setMessage(m.messageFillDateCirc);
       return;
     }
 
@@ -224,16 +226,12 @@ export const DataEntryMenu = ({
         (value) => Number.isNaN(value) || value <= 0,
       )
     ) {
-      setMessage(
-        "Inserisci tutte le circonferenze con valori numerici maggiori di zero.",
-      );
+      setMessage(m.messageInvalidCirc);
       return;
     }
 
     if (parsedSites.vita <= parsedSites.collo) {
-      setMessage(
-        "Per il calcolo BF da circonferenze: la vita deve essere maggiore del collo.",
-      );
+      setMessage(m.messageWaistNeck);
       return;
     }
 
@@ -243,9 +241,7 @@ export const DataEntryMenu = ({
         sitesCm: parsedSites,
       });
     } catch {
-      setMessage(
-        "Errore nel calcolo circonferenze. Controlla i dati inseriti.",
-      );
+      setMessage(m.messageCircCalcError);
       return;
     }
 
@@ -258,27 +254,27 @@ export const DataEntryMenu = ({
       polpaccio: "",
       collo: "",
     });
-    setMessage("Nuova misurazione circonferenze aggiunta con successo.");
+    setMessage(m.messageCircAdded);
   };
 
   const handleExportJson = () => {
-    const payload = buildAnthropometryExport(healthData);
+    const payload = buildAnthropometryExport(healthData, locale, m);
     downloadTextFile(
       payload.json,
-      `riepilogo-antropometria-${new Date().toISOString().slice(0, 10)}.json`,
+      `${m.filePrefixAnthropometrySummary}-${new Date().toISOString().slice(0, 10)}.json`,
       "application/json;charset=utf-8",
     );
-    setMessage("File JSON esportato.");
+    setMessage(m.messageJsonExported);
   };
 
   const handleExportCsv = () => {
-    const payload = buildAnthropometryExport(healthData);
+    const payload = buildAnthropometryExport(healthData, locale, m);
     downloadTextFile(
       payload.csv,
-      `riepilogo-antropometria-${new Date().toISOString().slice(0, 10)}.csv`,
+      `${m.filePrefixAnthropometrySummary}-${new Date().toISOString().slice(0, 10)}.csv`,
       "text/csv;charset=utf-8",
     );
-    setMessage("File CSV esportato.");
+    setMessage(m.messageCsvExported);
   };
 
   const handleExportNutritionistPdf = async () => {
@@ -289,35 +285,39 @@ export const DataEntryMenu = ({
       ]);
 
       const rows = buildNutritionReportRows(healthData);
-      const righePliche = rows.filter((row) => row.categoria === "Pliche");
+      const righePliche = rows.filter((row) => row.category === "skinfolds");
       const righeCirconferenze = rows.filter(
-        (row) => row.categoria === "Circonferenze",
+        (row) => row.category === "circumferences",
       );
       const doc = new jsPDF({ unit: "pt", format: "a4" });
 
       doc.setFontSize(16);
-      doc.text("Report Nutrizionista", 40, 44);
+      doc.text(m.pdfTitle, 40, 44);
       doc.setFontSize(10);
-      doc.text(`Paziente: ${healthData.profile.patientName}`, 40, 62);
-      doc.text(`Generato il: ${new Date().toLocaleString("it-IT")}`, 40, 76);
-      doc.text("Nota: BIA gestita separatamente da file .md", 40, 90);
+      doc.text(`${m.patientPrefix}: ${healthData.profile.patientName}`, 40, 62);
+      doc.text(
+        `${m.generatedOn}: ${new Date().toLocaleString(dateLocale)}`,
+        40,
+        76,
+      );
+      doc.text(`${m.noteLabel}: ${m.biaMdNote}`, 40, 90);
 
       autoTable(doc, {
         startY: 108,
         head: [
           [
-            "Data",
+            m.date,
             "#",
-            "Peso (kg)",
+            `${m.weight} (kg)`,
             "BF%",
-            "Media pliche (mm)",
-            "Tricipite",
-            "Addome",
-            "Soprailiaca",
-            "Sottoscapolare",
-            "Ascellare",
-            "Pettorale",
-            "Coscia",
+            `${m.averageSkinfold} (mm)`,
+            getSiteLabel(locale, "tricipite"),
+            getSiteLabel(locale, "addome"),
+            getSiteLabel(locale, "soprailiaca"),
+            getSiteLabel(locale, "sottoscapolare"),
+            getSiteLabel(locale, "ascellare"),
+            getSiteLabel(locale, "pettorale"),
+            getSiteLabel(locale, "coscia"),
           ],
         ],
         body: righePliche.map((row) => [
@@ -346,28 +346,28 @@ export const DataEntryMenu = ({
 
       doc.setFontSize(12);
       doc.text(
-        "Misure circonferenze",
+        m.pdfCircTableTitle,
         40,
-        ((doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
-          ?.finalY ?? 108) + 24,
+        ((doc as unknown as { lastAutoTable?: { finalY: number } })
+          .lastAutoTable?.finalY ?? 108) + 24,
       );
 
       autoTable(doc, {
         startY:
-          ((doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
-            ?.finalY ?? 108) + 32,
+          ((doc as unknown as { lastAutoTable?: { finalY: number } })
+            .lastAutoTable?.finalY ?? 108) + 32,
         head: [
           [
-            "Data",
+            m.date,
             "#",
             "BF%",
-            "Braccio",
-            "Torace",
-            "Vita",
-            "Fianchi",
-            "Coscia",
-            "Polpaccio",
-            "Collo",
+            getSiteLabel(locale, "braccio"),
+            getSiteLabel(locale, "torace"),
+            getSiteLabel(locale, "vita"),
+            getSiteLabel(locale, "fianchi"),
+            getSiteLabel(locale, "coscia"),
+            getSiteLabel(locale, "polpaccio"),
+            getSiteLabel(locale, "collo"),
           ],
         ],
         body: righeCirconferenze.map((row) => [
@@ -393,11 +393,11 @@ export const DataEntryMenu = ({
       });
 
       doc.save(
-        `report-nutrizionista-${new Date().toISOString().slice(0, 10)}.pdf`,
+        `${m.filePrefixNutritionistReport}-${new Date().toISOString().slice(0, 10)}.pdf`,
       );
-      setMessage("Report nutrizionista PDF esportato.");
+      setMessage(m.messagePdfExported);
     } catch {
-      setMessage("Errore export PDF. Riprova tra qualche secondo.");
+      setMessage(m.messagePdfError);
     }
   };
 
@@ -407,71 +407,111 @@ export const DataEntryMenu = ({
       const rows = buildNutritionReportRows(healthData);
       const workbook = XLSX.utils.book_new();
       const righePliche = rows
-        .filter((row) => row.categoria === "Pliche")
-        .map((row) => ({
-          data: row.date,
-          numero_misurazione: row.numeroMisurazione,
-          peso_kg: row.pesoKg ?? "",
-          body_fat_pct: row.bodyFatPct,
-          media_pliche_mm: row.mediaPlicheMm ?? "",
-          tricipite_mm: row.tricipiteMm ?? "",
-          addome_mm: row.addomeMm ?? "",
-          soprailiaca_mm: row.soprailiacaMm ?? "",
-          sottoscapolare_mm: row.sottoscapolareMm ?? "",
-          ascellare_mm: row.ascellareMm ?? "",
-          pettorale_mm: row.pettoraleMm ?? "",
-          coscia_mm: row.cosciaMm ?? "",
-        }));
+        .filter((row) => row.category === "skinfolds")
+        .map((row) =>
+          locale === "it"
+            ? {
+                data: row.date,
+                numero_misurazione: row.numeroMisurazione,
+                peso_kg: row.pesoKg ?? "",
+                body_fat_pct: row.bodyFatPct,
+                media_pliche_mm: row.mediaPlicheMm ?? "",
+                tricipite_mm: row.tricipiteMm ?? "",
+                addome_mm: row.addomeMm ?? "",
+                soprailiaca_mm: row.soprailiacaMm ?? "",
+                sottoscapolare_mm: row.sottoscapolareMm ?? "",
+                ascellare_mm: row.ascellareMm ?? "",
+                pettorale_mm: row.pettoraleMm ?? "",
+                coscia_mm: row.cosciaMm ?? "",
+              }
+            : {
+                date: row.date,
+                measurement_number: row.numeroMisurazione,
+                weight_kg: row.pesoKg ?? "",
+                body_fat_pct: row.bodyFatPct,
+                avg_skinfold_mm: row.mediaPlicheMm ?? "",
+                triceps_mm: row.tricipiteMm ?? "",
+                abdomen_mm: row.addomeMm ?? "",
+                suprailiac_mm: row.soprailiacaMm ?? "",
+                subscapular_mm: row.sottoscapolareMm ?? "",
+                axillary_mm: row.ascellareMm ?? "",
+                pectoral_mm: row.pettoraleMm ?? "",
+                thigh_mm: row.cosciaMm ?? "",
+              },
+        );
 
       const righeCirconferenze = rows
-        .filter((row) => row.categoria === "Circonferenze")
-        .map((row) => ({
-          data: row.date,
-          numero_misurazione: row.numeroMisurazione,
-          body_fat_pct: row.bodyFatPct,
-          braccio_cm: row.braccioCm ?? "",
-          torace_cm: row.toraceCm ?? "",
-          vita_cm: row.vitaCm ?? "",
-          fianchi_cm: row.fianchiCm ?? "",
-          coscia_cm: row.cosciaCm ?? "",
-          polpaccio_cm: row.polpaccioCm ?? "",
-          collo_cm: row.colloCm ?? "",
-        }));
+        .filter((row) => row.category === "circumferences")
+        .map((row) =>
+          locale === "it"
+            ? {
+                data: row.date,
+                numero_misurazione: row.numeroMisurazione,
+                body_fat_pct: row.bodyFatPct,
+                braccio_cm: row.braccioCm ?? "",
+                torace_cm: row.toraceCm ?? "",
+                vita_cm: row.vitaCm ?? "",
+                fianchi_cm: row.fianchiCm ?? "",
+                coscia_cm: row.cosciaCm ?? "",
+                polpaccio_cm: row.polpaccioCm ?? "",
+                collo_cm: row.colloCm ?? "",
+              }
+            : {
+                date: row.date,
+                measurement_number: row.numeroMisurazione,
+                body_fat_pct: row.bodyFatPct,
+                arm_cm: row.braccioCm ?? "",
+                chest_cm: row.toraceCm ?? "",
+                waist_cm: row.vitaCm ?? "",
+                hips_cm: row.fianchiCm ?? "",
+                thigh_cm: row.cosciaCm ?? "",
+                calf_cm: row.polpaccioCm ?? "",
+                neck_cm: row.colloCm ?? "",
+              },
+        );
 
       const summarySheet = XLSX.utils.json_to_sheet([
-        {
-          paziente: healthData.profile.patientName,
-          eta_anni: healthData.profile.ageYears,
-          altezza_cm: healthData.profile.heightCm,
-          generato_il: new Date().toISOString(),
-          nota: "BIA gestita separatamente da input .md",
-        },
+        locale === "it"
+          ? {
+              paziente: healthData.profile.patientName,
+              eta_anni: healthData.profile.ageYears,
+              altezza_cm: healthData.profile.heightCm,
+              generato_il: new Date().toISOString(),
+              nota: m.biaMdNote,
+            }
+          : {
+              patient: healthData.profile.patientName,
+              age_years: healthData.profile.ageYears,
+              height_cm: healthData.profile.heightCm,
+              generated_at: new Date().toISOString(),
+              note: m.biaMdNote,
+            },
       ]);
 
       const plicheSheet = XLSX.utils.json_to_sheet(righePliche);
       const circonferenzeSheet = XLSX.utils.json_to_sheet(righeCirconferenze);
 
-      XLSX.utils.book_append_sheet(workbook, summarySheet, "Riepilogo");
-      XLSX.utils.book_append_sheet(workbook, plicheSheet, "Pliche");
+      XLSX.utils.book_append_sheet(workbook, summarySheet, m.summarySheet);
+      XLSX.utils.book_append_sheet(workbook, plicheSheet, m.skinfoldSheet);
       XLSX.utils.book_append_sheet(
         workbook,
         circonferenzeSheet,
-        "Circonferenze",
+        m.circumferenceSheet,
       );
       XLSX.writeFile(
         workbook,
-        `report-nutrizionista-${new Date().toISOString().slice(0, 10)}.xlsx`,
+        `${m.filePrefixNutritionistReport}-${new Date().toISOString().slice(0, 10)}.xlsx`,
       );
-      setMessage("Report nutrizionista Excel esportato.");
+      setMessage(m.messageExcelExported);
     } catch {
-      setMessage("Errore export Excel. Riprova tra qualche secondo.");
+      setMessage(m.messageExcelError);
     }
   };
 
   return (
     <Panel
-      title="Menu Inserimento Dati"
-      subtitle="Aggiungi rapidamente pliche e circonferenze, poi esporta un riepilogo comodo per la nutrizionista."
+      title={m.dataEntryTitle}
+      subtitle={m.dataEntrySubtitle}
       icon={PlusCircle}
       rightSlot={
         <div className="flex flex-wrap items-center gap-2">
@@ -482,7 +522,7 @@ export const DataEntryMenu = ({
               className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800/70 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-700/70"
             >
               <X className="h-4 w-4" />
-              Chiudi
+              {m.close}
             </button>
           ) : null}
           <button
@@ -491,7 +531,7 @@ export const DataEntryMenu = ({
             className="inline-flex items-center gap-2 rounded-lg border border-cyan-700/60 bg-cyan-900/30 px-3 py-1.5 text-xs text-cyan-100 hover:bg-cyan-900/45"
           >
             <FileDown className="h-4 w-4" />
-            Report PDF
+            {m.reportPdf}
           </button>
           <button
             type="button"
@@ -499,7 +539,7 @@ export const DataEntryMenu = ({
             className="inline-flex items-center gap-2 rounded-lg border border-cyan-700/60 bg-cyan-900/30 px-3 py-1.5 text-xs text-cyan-100 hover:bg-cyan-900/45"
           >
             <FileSpreadsheet className="h-4 w-4" />
-            Report Excel
+            {m.reportExcel}
           </button>
           <button
             type="button"
@@ -507,7 +547,7 @@ export const DataEntryMenu = ({
             className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800/70 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-700/70"
           >
             <FileText className="h-4 w-4" />
-            Esporta JSON
+            {m.exportJson}
           </button>
           <button
             type="button"
@@ -515,7 +555,7 @@ export const DataEntryMenu = ({
             className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800/70 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-700/70"
           >
             <FileSpreadsheet className="h-4 w-4" />
-            Esporta CSV
+            {m.exportCsv}
           </button>
         </div>
       }
@@ -530,7 +570,7 @@ export const DataEntryMenu = ({
               : "border-slate-600 bg-slate-800/70 text-slate-200"
           }`}
         >
-          Pliche
+          {m.skinfolds}
         </button>
         <button
           type="button"
@@ -541,7 +581,7 @@ export const DataEntryMenu = ({
               : "border-slate-600 bg-slate-800/70 text-slate-200"
           }`}
         >
-          Circonferenze
+          {m.circumferences}
         </button>
       </div>
 
@@ -551,7 +591,7 @@ export const DataEntryMenu = ({
           onSubmit={handleAddSkinfold}
         >
           <label className="text-xs text-slate-400">
-            Data
+            {m.date}
             <input
               className={inputClassName}
               type="date"
@@ -560,7 +600,7 @@ export const DataEntryMenu = ({
             />
           </label>
           <label className="text-xs text-slate-400">
-            Peso (kg)
+            {m.weight} (kg)
             <input
               className={inputClassName}
               type="number"
@@ -571,15 +611,15 @@ export const DataEntryMenu = ({
           </label>
 
           <div className="rounded-lg border border-slate-700/60 bg-slate-900/60 px-3 py-2 text-xs text-slate-300">
-            Eta formula: calcolata automaticamente da data nascita
+            {m.ageFormula}
             {healthData.profile.birthDate
               ? ` (${healthData.profile.birthDate})`
-              : " del profilo"}
+              : ` ${m.profileSuffix}`}
           </div>
 
           {Object.entries(skinfoldSites).map(([key, value]) => (
             <label key={key} className="text-xs text-slate-400">
-              {key}
+              {getSiteLabel(locale, key as Parameters<typeof getSiteLabel>[1])}
               <input
                 className={inputClassName}
                 type="number"
@@ -597,14 +637,14 @@ export const DataEntryMenu = ({
 
           <div className="md:col-span-3 flex items-center justify-between">
             <p className="text-xs text-slate-500">
-              Prossima misurazione pliche: #{nextSkinfoldNumber}
+              {m.nextSkinfoldMeasurement}: #{nextSkinfoldNumber}
             </p>
             <button
               type="submit"
               className="inline-flex items-center gap-2 rounded-lg border border-cyan-600 bg-cyan-900/30 px-3 py-2 text-sm font-medium text-cyan-100 hover:bg-cyan-900/45"
             >
               <PlusCircle className="h-4 w-4" />
-              Aggiungi pliche
+              {m.addSkinfold}
             </button>
           </div>
         </form>
@@ -614,7 +654,7 @@ export const DataEntryMenu = ({
           onSubmit={handleAddCircumference}
         >
           <label className="text-xs text-slate-400">
-            Data
+            {m.date}
             <input
               className={inputClassName}
               type="date"
@@ -625,7 +665,7 @@ export const DataEntryMenu = ({
 
           {Object.entries(circSites).map(([key, value]) => (
             <label key={key} className="text-xs text-slate-400">
-              {key}
+              {getSiteLabel(locale, key as Parameters<typeof getSiteLabel>[1])}
               <input
                 className={inputClassName}
                 type="number"
@@ -643,27 +683,24 @@ export const DataEntryMenu = ({
 
           <div className="md:col-span-3 flex items-center justify-between">
             <p className="text-xs text-slate-500">
-              Prossima misurazione circonferenze: #{nextCircNumber}
+              {m.nextCircumferenceMeasurement}: #{nextCircNumber}
             </p>
             <button
               type="submit"
               className="inline-flex items-center gap-2 rounded-lg border border-cyan-600 bg-cyan-900/30 px-3 py-2 text-sm font-medium text-cyan-100 hover:bg-cyan-900/45"
             >
               <PlusCircle className="h-4 w-4" />
-              Aggiungi circonferenze
+              {m.addCircumference}
             </button>
           </div>
         </form>
       )}
 
       <div className="mt-4 flex items-center justify-between rounded-lg border border-slate-700/50 bg-slate-900/60 px-3 py-2 text-xs text-slate-400">
-        <p>
-          Per BIA: inviami il file .md come concordato e aggiornero io i dati
-          nella dashboard.
-        </p>
+        <p>{m.biaMdNote}</p>
         <span className="inline-flex items-center gap-1 text-slate-300">
           <Download className="h-3.5 w-3.5" />
-          Export pronto
+          {m.exportReady}
         </span>
       </div>
 
@@ -671,7 +708,7 @@ export const DataEntryMenu = ({
 
       <div className="mt-5 rounded-lg border border-slate-700/50 bg-slate-900/50 p-3">
         <h3 className="mb-3 text-sm font-semibold text-slate-200">
-          Elimina misurazioni
+          {m.deleteMeasurements}
         </h3>
 
         <div className="space-y-4">
@@ -682,38 +719,36 @@ export const DataEntryMenu = ({
             <div className="space-y-2">
               {healthData.bia.measurements.map((measurement) => {
                 const groupKey =
-                  measurement.date ?? measurement.dateLabel ?? "senza-data";
+                  measurement.date ?? measurement.dateLabel ?? "no-date";
                 return (
                   <div
                     key={`bia-delete-${measurement.id}`}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-700/60 bg-slate-900/70 px-3 py-2"
                   >
                     <span className="text-xs text-slate-300">
-                      {measurement.date ??
-                        measurement.dateLabel ??
-                        "Senza data"}{" "}
-                      - {measurement.id}
+                      {measurement.date ?? measurement.dateLabel ?? m.noDate} -{" "}
+                      {measurement.id}
                     </span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => {
                           onDeleteBia(measurement.id);
-                          setMessage("Misurazione BIA eliminata.");
+                          setMessage(m.messageBiaDeleted);
                         }}
                         className="rounded-md border border-rose-700/60 bg-rose-900/30 px-2 py-1 text-xs text-rose-200 hover:bg-rose-900/50"
                       >
-                        Elimina singolo
+                        {m.deleteSingle}
                       </button>
                       <button
                         type="button"
                         onClick={() => {
                           onDeleteBiaGroup(groupKey);
-                          setMessage("Blocco BIA eliminato.");
+                          setMessage(m.messageBiaGroupDeleted);
                         }}
                         className="rounded-md border border-amber-700/60 bg-amber-900/25 px-2 py-1 text-xs text-amber-200 hover:bg-amber-900/45"
                       >
-                        Elimina blocco
+                        {m.deleteGroup}
                       </button>
                     </div>
                   </div>
@@ -724,7 +759,7 @@ export const DataEntryMenu = ({
 
           <div>
             <p className="mb-2 text-xs uppercase tracking-wide text-slate-400">
-              Pliche
+              {m.skinfolds}
             </p>
             <div className="space-y-2">
               {healthData.skinfolds.measurements.map((measurement) => (
@@ -733,7 +768,7 @@ export const DataEntryMenu = ({
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-700/60 bg-slate-900/70 px-3 py-2"
                 >
                   <span className="text-xs text-slate-300">
-                    {measurement.date ?? "Senza data"} - #
+                    {measurement.date ?? m.noDate} - #
                     {measurement.measurementNumber}
                   </span>
                   <div className="flex items-center gap-2">
@@ -741,21 +776,21 @@ export const DataEntryMenu = ({
                       type="button"
                       onClick={() => {
                         onDeleteSkinfold(measurement.id);
-                        setMessage("Misurazione pliche eliminata.");
+                        setMessage(m.messageSkinfoldDeleted);
                       }}
                       className="rounded-md border border-rose-700/60 bg-rose-900/30 px-2 py-1 text-xs text-rose-200 hover:bg-rose-900/50"
                     >
-                      Elimina singolo
+                      {m.deleteSingle}
                     </button>
                     <button
                       type="button"
                       onClick={() => {
                         onDeleteSkinfoldGroup(measurement.date ?? "");
-                        setMessage("Blocco pliche eliminato.");
+                        setMessage(m.messageSkinfoldGroupDeleted);
                       }}
                       className="rounded-md border border-amber-700/60 bg-amber-900/25 px-2 py-1 text-xs text-amber-200 hover:bg-amber-900/45"
                     >
-                      Elimina blocco
+                      {m.deleteGroup}
                     </button>
                   </div>
                 </div>
@@ -765,7 +800,7 @@ export const DataEntryMenu = ({
 
           <div>
             <p className="mb-2 text-xs uppercase tracking-wide text-slate-400">
-              Circonferenze
+              {m.circumferences}
             </p>
             <div className="space-y-2">
               {healthData.circumferences.measurements.map((measurement) => (
@@ -774,7 +809,7 @@ export const DataEntryMenu = ({
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-700/60 bg-slate-900/70 px-3 py-2"
                 >
                   <span className="text-xs text-slate-300">
-                    {measurement.date ?? "Senza data"} - #
+                    {measurement.date ?? m.noDate} - #
                     {measurement.measurementNumber}
                   </span>
                   <div className="flex items-center gap-2">
@@ -782,21 +817,21 @@ export const DataEntryMenu = ({
                       type="button"
                       onClick={() => {
                         onDeleteCircumference(measurement.id);
-                        setMessage("Misurazione circonferenze eliminata.");
+                        setMessage(m.messageCircDeleted);
                       }}
                       className="rounded-md border border-rose-700/60 bg-rose-900/30 px-2 py-1 text-xs text-rose-200 hover:bg-rose-900/50"
                     >
-                      Elimina singolo
+                      {m.deleteSingle}
                     </button>
                     <button
                       type="button"
                       onClick={() => {
                         onDeleteCircumferenceGroup(measurement.date ?? "");
-                        setMessage("Blocco circonferenze eliminato.");
+                        setMessage(m.messageCircGroupDeleted);
                       }}
                       className="rounded-md border border-amber-700/60 bg-amber-900/25 px-2 py-1 text-xs text-amber-200 hover:bg-amber-900/45"
                     >
-                      Elimina blocco
+                      {m.deleteGroup}
                     </button>
                   </div>
                 </div>

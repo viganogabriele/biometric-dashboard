@@ -1,4 +1,5 @@
 import { Printer } from "lucide-react";
+import { useI18n } from "../i18n";
 import type { HealthData } from "../types";
 import { formatDate, formatMetric } from "../utils/format";
 import { deltaFromPrevious, getLatestAndPrevious } from "../utils/metrics";
@@ -10,7 +11,7 @@ interface NutritionistTableProps {
 }
 
 interface DenseRow {
-  category: "BIA" | "Pliche" | "Circonferenze";
+  category: "BIA" | "skinfolds" | "circumferences";
   date: string;
   measurement: string;
   metric: string;
@@ -20,7 +21,21 @@ interface DenseRow {
   positiveIsGood?: boolean;
 }
 
-const buildDenseRows = (healthData: HealthData): DenseRow[] => {
+const buildDenseRows = (
+  healthData: HealthData,
+  dateLocale: string,
+  dateUnavailable: string,
+  labels: {
+    weight: string;
+    bodyFat: string;
+    bodyFatFromSkinfolds: string;
+    averageSkinfold: string;
+    bodyDensity: string;
+    bodyFatFromCircumferences: string;
+    waist: string;
+    neck: string;
+  },
+): DenseRow[] => {
   const rows: DenseRow[] = [];
 
   const { latest: latestBia, previous: previousBia } = getLatestAndPrevious(
@@ -31,10 +46,10 @@ const buildDenseRows = (healthData: HealthData): DenseRow[] => {
       {
         category: "BIA",
         date: latestBia.date
-          ? formatDate(latestBia.date)
-          : (latestBia.dateLabel ?? "Data non disponibile"),
+          ? formatDate(latestBia.date, dateUnavailable, dateLocale)
+          : (latestBia.dateLabel ?? dateUnavailable),
         measurement: latestBia.id,
-        metric: "Peso",
+        metric: labels.weight,
         value: latestBia.metrics.weightKg,
         unit: "kg",
         delta: deltaFromPrevious(
@@ -46,10 +61,10 @@ const buildDenseRows = (healthData: HealthData): DenseRow[] => {
       {
         category: "BIA",
         date: latestBia.date
-          ? formatDate(latestBia.date)
-          : (latestBia.dateLabel ?? "Data non disponibile"),
+          ? formatDate(latestBia.date, dateUnavailable, dateLocale)
+          : (latestBia.dateLabel ?? dateUnavailable),
         measurement: latestBia.id,
-        metric: "Massa grassa",
+        metric: labels.bodyFat,
         value: latestBia.metrics.bodyFatPct,
         unit: "%",
         delta: deltaFromPrevious(
@@ -61,8 +76,8 @@ const buildDenseRows = (healthData: HealthData): DenseRow[] => {
       {
         category: "BIA",
         date: latestBia.date
-          ? formatDate(latestBia.date)
-          : (latestBia.dateLabel ?? "Data non disponibile"),
+          ? formatDate(latestBia.date, dateUnavailable, dateLocale)
+          : (latestBia.dateLabel ?? dateUnavailable),
         measurement: latestBia.id,
         metric: "ECW",
         value: latestBia.metrics.ecwKg,
@@ -75,8 +90,8 @@ const buildDenseRows = (healthData: HealthData): DenseRow[] => {
       {
         category: "BIA",
         date: latestBia.date
-          ? formatDate(latestBia.date)
-          : (latestBia.dateLabel ?? "Data non disponibile"),
+          ? formatDate(latestBia.date, dateUnavailable, dateLocale)
+          : (latestBia.dateLabel ?? dateUnavailable),
         measurement: latestBia.id,
         metric: "ICW",
         value: latestBia.metrics.icwKg,
@@ -89,8 +104,8 @@ const buildDenseRows = (healthData: HealthData): DenseRow[] => {
       {
         category: "BIA",
         date: latestBia.date
-          ? formatDate(latestBia.date)
-          : (latestBia.dateLabel ?? "Data non disponibile"),
+          ? formatDate(latestBia.date, dateUnavailable, dateLocale)
+          : (latestBia.dateLabel ?? dateUnavailable),
         measurement: latestBia.id,
         metric: "BMR",
         value: latestBia.metrics.bmrKcal,
@@ -109,10 +124,10 @@ const buildDenseRows = (healthData: HealthData): DenseRow[] => {
   if (latestSkin) {
     rows.push(
       {
-        category: "Pliche",
-        date: formatDate(latestSkin.date),
+        category: "skinfolds",
+        date: formatDate(latestSkin.date, dateUnavailable, dateLocale),
         measurement: `#${latestSkin.measurementNumber}`,
-        metric: "Massa grassa da pliche",
+        metric: labels.bodyFatFromSkinfolds,
         value: latestSkin.bodyFatPctFromSkinfold,
         unit: "%",
         delta: deltaFromPrevious(
@@ -122,20 +137,20 @@ const buildDenseRows = (healthData: HealthData): DenseRow[] => {
         positiveIsGood: false,
       },
       {
-        category: "Pliche",
-        date: formatDate(latestSkin.date),
+        category: "skinfolds",
+        date: formatDate(latestSkin.date, dateUnavailable, dateLocale),
         measurement: `#${latestSkin.measurementNumber}`,
-        metric: "Media pliche",
+        metric: labels.averageSkinfold,
         value: latestSkin.averageMm,
         unit: "mm",
         delta: deltaFromPrevious(latestSkin.averageMm, previousSkin?.averageMm),
         positiveIsGood: false,
       },
       {
-        category: "Pliche",
-        date: formatDate(latestSkin.date),
+        category: "skinfolds",
+        date: formatDate(latestSkin.date, dateUnavailable, dateLocale),
         measurement: `#${latestSkin.measurementNumber}`,
-        metric: "Densita corporea",
+        metric: labels.bodyDensity,
         value: latestSkin.bodyDensity,
         unit: "",
         delta: deltaFromPrevious(
@@ -152,10 +167,10 @@ const buildDenseRows = (healthData: HealthData): DenseRow[] => {
   if (latestCirc) {
     rows.push(
       {
-        category: "Circonferenze",
-        date: formatDate(latestCirc.date),
+        category: "circumferences",
+        date: formatDate(latestCirc.date, dateUnavailable, dateLocale),
         measurement: `#${latestCirc.measurementNumber}`,
-        metric: "Massa grassa da circonferenze",
+        metric: labels.bodyFatFromCircumferences,
         value: latestCirc.bodyFatPctFromCircumferences,
         unit: "%",
         delta: deltaFromPrevious(
@@ -165,10 +180,10 @@ const buildDenseRows = (healthData: HealthData): DenseRow[] => {
         positiveIsGood: false,
       },
       {
-        category: "Circonferenze",
-        date: formatDate(latestCirc.date),
+        category: "circumferences",
+        date: formatDate(latestCirc.date, dateUnavailable, dateLocale),
         measurement: `#${latestCirc.measurementNumber}`,
-        metric: "Vita",
+        metric: labels.waist,
         value: latestCirc.sitesCm.vita,
         unit: "cm",
         delta: deltaFromPrevious(
@@ -178,10 +193,10 @@ const buildDenseRows = (healthData: HealthData): DenseRow[] => {
         positiveIsGood: false,
       },
       {
-        category: "Circonferenze",
-        date: formatDate(latestCirc.date),
+        category: "circumferences",
+        date: formatDate(latestCirc.date, dateUnavailable, dateLocale),
         measurement: `#${latestCirc.measurementNumber}`,
-        metric: "Collo",
+        metric: labels.neck,
         value: latestCirc.sitesCm.collo,
         unit: "cm",
         delta: deltaFromPrevious(
@@ -196,12 +211,34 @@ const buildDenseRows = (healthData: HealthData): DenseRow[] => {
 };
 
 export const NutritionistTable = ({ healthData }: NutritionistTableProps) => {
-  const rows = buildDenseRows(healthData);
+  const { m, numberLocale, dateLocale } = useI18n();
+  const rows = buildDenseRows(healthData, dateLocale, m.dateUnavailable, {
+    weight: m.weight,
+    bodyFat: m.bodyFat,
+    bodyFatFromSkinfolds: m.bodyFatFromSkinfolds,
+    averageSkinfold: m.averageSkinfold,
+    bodyDensity: m.bodyDensity,
+    bodyFatFromCircumferences: m.bodyFatFromCircumferences,
+    waist: m.waist,
+    neck: m.neck,
+  });
+
+  const categoryLabel = (category: DenseRow["category"]): string => {
+    if (category === "skinfolds") {
+      return m.skinfolds;
+    }
+
+    if (category === "circumferences") {
+      return m.circumferences;
+    }
+
+    return "BIA";
+  };
 
   return (
     <Panel
-      title="Modalita nutrizionista"
-      subtitle="Vista compatta ottimizzata per stampa ed export PDF."
+      title={m.nutritionModeTitle}
+      subtitle={m.nutritionModeSubtitle}
       rightSlot={
         <button
           type="button"
@@ -209,7 +246,7 @@ export const NutritionistTable = ({ healthData }: NutritionistTableProps) => {
           className="no-print inline-flex items-center gap-2 rounded-lg border border-cyan-700/60 bg-cyan-900/30 px-3 py-1.5 text-sm font-medium text-cyan-100 transition hover:bg-cyan-900/45"
         >
           <Printer className="h-4 w-4" />
-          Stampa / Salva PDF
+          {m.printSavePdf}
         </button>
       }
     >
@@ -217,23 +254,25 @@ export const NutritionistTable = ({ healthData }: NutritionistTableProps) => {
         <table className="min-w-full divide-y divide-slate-700 text-sm">
           <thead className="bg-slate-900/80 text-xs uppercase tracking-wide text-slate-400">
             <tr>
-              <th className="px-3 py-2 text-left">Categoria</th>
-              <th className="px-3 py-2 text-left">Data</th>
-              <th className="px-3 py-2 text-left">Misurazione</th>
-              <th className="px-3 py-2 text-left">Metrica</th>
-              <th className="px-3 py-2 text-left">Valore</th>
-              <th className="px-3 py-2 text-left">Delta vs precedente</th>
+              <th className="px-3 py-2 text-left">{m.reportCategory}</th>
+              <th className="px-3 py-2 text-left">{m.reportDate}</th>
+              <th className="px-3 py-2 text-left">{m.reportMeasurement}</th>
+              <th className="px-3 py-2 text-left">{m.reportMetric}</th>
+              <th className="px-3 py-2 text-left">{m.reportValue}</th>
+              <th className="px-3 py-2 text-left">{m.reportDelta}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800 text-slate-100">
             {rows.map((row) => (
               <tr key={`${row.category}-${row.measurement}-${row.metric}`}>
-                <td className="px-3 py-2 text-slate-300">{row.category}</td>
+                <td className="px-3 py-2 text-slate-300">
+                  {categoryLabel(row.category)}
+                </td>
                 <td className="px-3 py-2 text-slate-300">{row.date}</td>
                 <td className="px-3 py-2 text-slate-300">{row.measurement}</td>
                 <td className="px-3 py-2">{row.metric}</td>
                 <td className="px-3 py-2">
-                  {formatMetric(row.value, row.unit, 2)}
+                  {formatMetric(row.value, row.unit, 2, numberLocale)}
                 </td>
                 <td className="px-3 py-2">
                   <DeltaPill
@@ -250,21 +289,21 @@ export const NutritionistTable = ({ healthData }: NutritionistTableProps) => {
 
       <div className="mt-4 grid gap-3 text-xs text-slate-400 md:grid-cols-3">
         <article className="rounded-lg border border-slate-700/50 bg-slate-900/65 p-3">
-          <p className="font-semibold text-slate-200">Densita da pliche</p>
+          <p className="font-semibold text-slate-200">{m.formulaSkinDensity}</p>
           <p className="mt-1">
             {healthData.formulas.bodyDensityFromSkinfolds.expression}
           </p>
         </article>
         <article className="rounded-lg border border-slate-700/50 bg-slate-900/65 p-3">
-          <p className="font-semibold text-slate-200">Massa grassa da densita</p>
+          <p className="font-semibold text-slate-200">
+            {m.formulaBodyFatDensity}
+          </p>
           <p className="mt-1">
             {healthData.formulas.bodyFatFromDensity.expression}
           </p>
         </article>
         <article className="rounded-lg border border-slate-700/50 bg-slate-900/65 p-3">
-          <p className="font-semibold text-slate-200">
-            Massa grassa da circonferenze
-          </p>
+          <p className="font-semibold text-slate-200">{m.formulaBodyFatCirc}</p>
           <p className="mt-1">
             {healthData.formulas.bodyFatFromCircumferences.expression}
           </p>
